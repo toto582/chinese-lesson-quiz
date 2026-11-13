@@ -161,7 +161,7 @@ if (canSpeak) {
   findVoice();
   try { speechSynthesis.addEventListener("voiceschanged", () => { findVoice(); if (!Q) home(); }); } catch (e) {}
 }
-const speak = (t) => {
+const tts = (t) => {
   if (!canSpeak) return;
   try {
     if (!zhVoice) findVoice();
@@ -173,6 +173,18 @@ const speak = (t) => {
     // cancel 직후 바로 speak 하면 새 발음까지 취소되는 브라우저가 있어 잠깐 띄움
     if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(go, 120); } else go();
   } catch (e) {}
+};
+// 녹음 파일(audio/*.mp3)을 먼저 재생하고, 실패하면 기기 음성으로 읽음
+const player = new Audio();
+const stopSound = () => { try { player.pause(); } catch (e) {} try { speechSynthesis.cancel(); } catch (e) {} };
+const speak = (t, au) => {
+  stopSound();
+  if (!au) return tts(t);
+  try {
+    player.src = "audio/" + au + ".mp3";
+    const p = player.play();
+    if (p && p.catch) p.catch((err) => { if (!err || err.name !== "AbortError") tts(t); });
+  } catch (e) { tts(t); }
 };
 // 발음 가능 상태 안내 문구
 const voiceNote = () => {
@@ -203,17 +215,18 @@ function buildQuestions(step) {
       const others = all.filter((x) => x !== w);
       const ds = distractors(keyOf(w), others.filter((x) => x[2] === w[2]), others.filter((x) => x[2] !== w[2]), keyOf);
       const opts = shuffle([w, ...ds]);
-      return { kind: "mc", zh: w[0], py: w[1], ko: w[3], opts: opts.map((o) => o[3]), ans: opts.indexOf(w) };
+      return { kind: "mc", zh: w[0], py: w[1], ko: w[3], opts: opts.map((o) => o[3]), ans: opts.indexOf(w), au: "w" + all.indexOf(w) };
     });
   }
   const list = pick(SENT).flatMap((g) => g.list);
-  if (step === 1) return shuffle(list).map((s) => ({ kind: "order", s, zh: hz(s), py: pyOf(s), ko: s.k }));
+  const allS = SENT.flatMap((g) => g.list);
+  if (step === 1) return shuffle(list).map((s) => ({ kind: "order", s, zh: hz(s), py: pyOf(s), ko: s.k, au: "s" + allS.indexOf(s) }));
   return shuffle(list).map((s) => {
     const grp = SENT.find((g) => g.list.includes(s)).list;
     const all = SENT.flatMap((g) => g.list);
     const ds = distractors(s.k, grp.filter((x) => x !== s), all.filter((x) => !grp.includes(x)), (x) => x.k);
     const opts = shuffle([s, ...ds]);
-    return { kind: "mc", zh: hz(s), py: pyOf(s), ko: s.k, opts: opts.map((o) => o.k), ans: opts.indexOf(s) };
+    return { kind: "mc", zh: hz(s), py: pyOf(s), ko: s.k, opts: opts.map((o) => o.k), ans: opts.indexOf(s), au: "s" + allS.indexOf(s) };
   });
 }
 
@@ -223,7 +236,7 @@ function countFor(step) {
 
 function home() {
   Q = null;
-  try { speechSynthesis.cancel(); } catch (e) {}
+  stopSound();
   document.body.classList.toggle("nopy", !showPy);
   app.innerHTML = `
     <h1>중국어 4·5과 학습</h1>
@@ -243,8 +256,7 @@ function home() {
         <span><span class="t">${s.name}</span><br><span class="d">${s.desc} · ${countFor(i)}문항</span></span>
         <span class="best">${best ? `최고 기록<b>${best.right} / ${best.total}</b>` : ""}</span>
       </button>`;
-    }).join("")}</div>
-    ${voiceNote() ? `<p class="note">🔈 ${voiceNote()}</p>` : ""}`;
+    }).join("")}</div>`;
   app.querySelector("#lessons").onclick = (e) => { const b = e.target.closest("button"); if (b) { lesson = +b.dataset.i; home(); } };
   app.querySelector("#pyseg").onclick = (e) => { const b = e.target.closest("button"); if (b) { showPy = b.dataset.v === "1"; store.set("showPy", showPy); home(); } };
   app.querySelectorAll(".step").forEach((b) => (b.onclick = () => start(+b.dataset.step)));
@@ -279,8 +291,8 @@ function nextBtn() {
   app.querySelector(".card").appendChild(b);
   b.focus();
 }
-const sayBtn = canSpeak ? `<button class="say" id="say">🔊 발음 듣기</button>` : "";
-function bindSay(t) { const b = app.querySelector("#say"); if (b) b.onclick = () => speak(t); }
+const sayBtn = `<button class="say" id="say">🔊 발음 듣기</button>`;
+function bindSay(q) { const b = app.querySelector("#say"); if (b) b.onclick = () => speak(q.zh, q.au); }
 
 function render() {
   if (Q.i >= Q.list.length) return result();
@@ -298,8 +310,8 @@ function renderMC(q) {
       ${sayBtn}
     </div>
     <div class="opts">${q.opts.map((o, i) => `<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}</div>`);
-  bindSay(q.zh);
-  if (Q.step === 0) speak(q.zh); // 단어: 문제가 나오면 바로 발음
+  bindSay(q);
+  if (Q.step === 0) speak(q.zh, q.au); // 단어: 문제가 나오면 바로 발음
   const btns = [...app.querySelectorAll(".opt")];
   btns.forEach((b) => (b.onclick = () => {
     const i = +b.dataset.i;
@@ -308,7 +320,7 @@ function renderMC(q) {
     if (i !== q.ans) b.classList.add("wrong");
     app.querySelector("#ppy").classList.remove("hidepy");
     answered(q, i === q.ans);
-    if (Q.step === 2 && i === q.ans) speak(q.zh); // 해석: 정답이면 문장 읽기
+    if (Q.step === 2 && i === q.ans) speak(q.zh, q.au); // 해석: 정답이면 문장 읽기
     nextBtn();
   }));
 }
@@ -347,8 +359,8 @@ function renderOrder(q) {
     fb.className = "fb " + (ok ? "right" : "wrong");
     fb.innerHTML = `<b>${ok ? "정답이에요!" : "아쉬워요. 정답은"}</b>${zh(q.zh)}<span class="py">${esc(q.py)}</span>${sayBtn}`;
     app.querySelector(".card").appendChild(fb);
-    bindSay(q.zh);
-    if (ok) speak(q.zh); // 배열: 정답이면 문장 읽기
+    bindSay(q);
+    if (ok) speak(q.zh, q.au); // 배열: 정답이면 문장 읽기
     answered(q, ok);
     nextBtn();
   };
