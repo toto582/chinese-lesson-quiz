@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>중국어 4·5과 학습</title>
+<style>
+:root {
+  --bg: #f4f1ea; --card: #ffffff; --ink: #1d1b18; --sub: #6b665e; --line: #ddd6c8;
+  --accent: #b3261e; --accent-ink: #ffffff; --soft: #f6e9e7;
+  --ok: #1b7f4b; --ok-bg: #e3f4ea; --no: #b3261e; --no-bg: #fbe6e4;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171614; --card: #23211e; --ink: #f1ede5; --sub: #a59f94; --line: #3a3732;
+    --accent: #e8695f; --accent-ink: #1a0d0b; --soft: #3a2422;
+    --ok: #6fd39b; --ok-bg: #173526; --no: #ff8a80; --no-bg: #43201d;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif;
+  font-size: 16px; line-height: 1.5; -webkit-text-size-adjust: 100%;
+}
+#app { max-width: 640px; margin: 0 auto; padding: 20px 16px 48px; }
+.zh { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", "Noto Sans CJK SC", sans-serif; }
+.py { font-family: "Segoe UI", system-ui, Arial, sans-serif; color: var(--sub); }
+body.nopy .hidepy { visibility: hidden; }
+button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+h1 { font-size: 24px; margin: 8px 0 2px; letter-spacing: -0.02em; }
+.lead { color: var(--sub); margin: 0 0 20px; font-size: 14px; }
+.label { font-size: 13px; color: var(--sub); margin: 18px 0 8px; font-weight: 600; }
+
+.seg { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg button {
+  border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+  padding: 8px 14px; font-size: 14px; min-height: 40px;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+.steps { display: grid; gap: 12px; }
+.step {
+  display: flex; align-items: center; gap: 14px; text-align: left; width: 100%;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px;
+}
+.step:hover, .step:focus-visible { border-color: var(--accent); outline: none; }
+.badge {
+  flex: none; width: 52px; height: 52px; border-radius: 14px; background: var(--soft); color: var(--accent);
+  display: grid; place-items: center; font-weight: 800; font-size: 12px; line-height: 1.1; text-align: center;
+}
+.badge b { font-size: 20px; display: block; }
+.step .t { font-weight: 700; font-size: 17px; }
+.step .d { color: var(--sub); font-size: 13.5px; }
+.step .best { margin-left: auto; flex: none; font-size: 12.5px; color: var(--sub); text-align: right; }
+.step .best b { display: block; font-size: 15px; color: var(--ink); }
+
+.top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.top .name { font-weight: 700; }
+.top .count { margin-left: auto; color: var(--sub); font-size: 14px; font-variant-numeric: tabular-nums; }
+.ghost { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 6px 12px; min-height: 40px; font-size: 14px; }
+.bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; margin-bottom: 16px; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .25s; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 22px 18px; }
+.ask { font-size: 13px; color: var(--sub); margin-bottom: 10px; }
+.prompt { text-align: center; padding: 6px 0 18px; }
+.prompt .zh { font-size: 40px; line-height: 1.25; display: block; word-break: keep-all; }
+.prompt .zh.long { font-size: 28px; }
+.prompt .py { font-size: 17px; display: block; margin-top: 4px; min-height: 26px; }
+.prompt .ko { font-size: 22px; font-weight: 700; word-break: keep-all; }
+.say { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 12px; font-size: 13px; margin-top: 10px; min-height: 34px; color: var(--sub); }
+
+.opts { display: grid; gap: 10px; }
+.opt {
+  text-align: left; background: var(--bg); border: 1.5px solid var(--line); border-radius: 12px;
+  padding: 13px 14px; min-height: 52px; font-size: 16px; word-break: keep-all;
+}
+.opt:not(:disabled):hover { border-color: var(--accent); }
+.opt.right { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); font-weight: 700; }
+.opt.wrong { background: var(--no-bg); border-color: var(--no); color: var(--no); }
+.opt:disabled { cursor: default; }
+
+.slot {
+  min-height: 78px; border: 1.5px dashed var(--line); border-radius: 12px; padding: 8px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; background: var(--bg);
+}
+.slot:empty::before { content: "아래 낱말을 순서대로 눌러 보세요"; color: var(--sub); font-size: 14px; padding: 0 6px; }
+.slot.right { border-style: solid; border-color: var(--ok); background: var(--ok-bg); }
+.slot.wrong { border-style: solid; border-color: var(--no); background: var(--no-bg); }
+.pool { display: flex; flex-wrap: wrap; gap: 8px; min-height: 60px; margin-bottom: 16px; }
+.chip {
+  display: inline-flex; flex-direction: column; align-items: center; line-height: 1.15;
+  background: var(--card); border: 1.5px solid var(--ink); border-radius: 10px; padding: 6px 12px 7px; min-width: 48px; min-height: 56px; justify-content: center;
+}
+.chip .zh { font-size: 22px; }
+.chip .py { font-size: 12px; }
+.chip:disabled { cursor: default; }
+
+.fb { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: 15px; }
+.fb.right { background: var(--ok-bg); color: var(--ok); }
+.fb.wrong { background: var(--no-bg); color: var(--no); }
+.fb .zh { font-size: 20px; display: block; color: var(--ink); margin-top: 2px; }
+.fb .py, .fb .ko { display: block; color: var(--ink); font-size: 14px; }
+.main {
+  width: 100%; margin-top: 14px; border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink);
+  font-weight: 700; padding: 14px; min-height: 52px; font-size: 16px;
+}
+.main:disabled { opacity: .4; cursor: default; }
+.second { width: 100%; margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 13px; min-height: 50px; }
+
+.score { text-align: center; padding: 10px 0 4px; }
+.score .big { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.score .big small { font-size: 22px; color: var(--sub); font-weight: 600; }
+.score p { margin: 6px 0 0; color: var(--sub); }
+.miss { margin: 18px 0 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+.miss li { padding: 10px 2px; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+.miss .zh { font-size: 18px; margin-right: 6px; }
+.miss .ko { display: block; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="data.js"></script>
+<script>
+const app = document.getElementById("app");
+const LESSONS = ["전체", "제4과 본문2", "제5과 본문1", "제5과 본문2"];
+const STEPS = [
+  { name: "단어", desc: "한자를 보고 알맞은 뜻 고르기" },
+  { name: "문장 배열", desc: "뜻에 맞게 낱말을 순서대로 놓기" },
+  { name: "문장 해석", desc: "문장을 보고 알맞은 해석 고르기" },
+];
+const ALT = { "你将来想当什么": ["将来你想当什么"] };
+let lesson = 0;
+let Q = null;
+
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+let showPy = store.get("showPy") !== false;
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const zh = (t, cls = "") => `<span class="zh ${cls}" lang="zh-CN">${esc(t)}</span>`;
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = (arr) => (lesson === 0 ? arr : [arr[lesson - 1]]);
+const hz = (s) => s.h.join("") + s.e;
+const pyOf = (s) => { const t = s.p.join(" "); return t.charAt(0).toUpperCase() + t.slice(1) + (s.e === "？" ? "?" : "."); };
+const speak = (t) => {
+  try {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = "zh-CN"; u.rate = 0.8;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+};
+const canSpeak = "speechSynthesis" in window;
+
+// 보기 3개 뽑기: 뜻이 겹치지 않게, 가까운 후보(near)를 먼저
+function distractors(answerKey, near, far, keyOf) {
+  const seen = new Set([answerKey]);
+  const out = [];
+  for (const c of [...shuffle(near), ...shuffle(far)]) {
+    const k = keyOf(c);
+    if (seen.has(k)) continue;
+    seen.add(k); out.push(c);
+    if (out.length === 3) break;
+  }
+  return out;
+}
+
+function buildQuestions(step) {
+  if (step === 0) {
+    const all = VOCAB.flatMap((g) => g.words);
+    const keyOf = (w) => w[3].split(" (")[0];
+    return shuffle(pick(VOCAB).flatMap((g) => g.words)).map((w) => {
+      const others = all.filter((x) => x !== w);
+      const ds = distractors(keyOf(w), others.filter((x) => x[2] === w[2]), others.filter((x) => x[2] !== w[2]), keyOf);
+      const opts = shuffle([w, ...ds]);
+      return { kind: "mc", zh: w[0], py: w[1], ko: w[3], opts: opts.map((o) => o[3]), ans: opts.indexOf(w) };
+    });
+  }
+  const list = pick(SENT).flatMap((g) => g.list);
+  if (step === 1) return shuffle(list).map((s) => ({ kind: "order", s, zh: hz(s), py: pyOf(s), ko: s.k }));
+  return shuffle(list).map((s) => {
+    const grp = SENT.find((g) => g.list.includes(s)).list;
+    const all = SENT.flatMap((g) => g.list);
+    const ds = distractors(s.k, grp.filter((x) => x !== s), all.filter((x) => !grp.includes(x)), (x) => x.k);
+    const opts = shuffle([s, ...ds]);
+    return { kind: "mc", zh: hz(s), py: pyOf(s), ko: s.k, opts: opts.map((o) => o.k), ans: opts.indexOf(s) };
+  });
+}
+
+function countFor(step) {
+  return step === 0 ? pick(VOCAB).reduce((n, g) => n + g.words.length, 0) : pick(SENT).reduce((n, g) => n + g.list.length, 0);
+}
+
+function home() {
+  Q = null;
+  document.body.classList.toggle("nopy", !showPy);
+  app.innerHTML = `
+    <h1>중국어 4·5과 학습</h1>
+    <p class="lead">제4과 본문2 · 제5과 본문1 · 제5과 본문2 — 단어부터 문장 해석까지 3단계로 익혀요.</p>
+    <div class="label">학습 범위</div>
+    <div class="seg" id="lessons">${LESSONS.map((l, i) => `<button data-i="${i}" aria-pressed="${i === lesson}">${l}</button>`).join("")}</div>
+    <div class="label">병음 표시</div>
+    <div class="seg" id="pyseg">
+      <button data-v="1" aria-pressed="${showPy}">보기</button>
+      <button data-v="0" aria-pressed="${!showPy}">숨기기 (어렵게)</button>
+    </div>
+    <div class="label">단계 선택</div>
+    <div class="steps">${STEPS.map((s, i) => {
+      const best = store.get(`best_${i}_${lesson}`);
+      return `<button class="step" data-step="${i}">
+        <span class="badge"><span>STEP<b>${i + 1}</b></span></span>
+        <span><span class="t">${s.name}</span><br><span class="d">${s.desc} · ${countFor(i)}문항</span></span>
+        <span class="best">${best ? `최고 기록<b>${best.right} / ${best.total}</b>` : ""}</span>
+      </button>`;
+    }).join("")}</div>`;
+  app.querySelector("#lessons").onclick = (e) => { const b = e.target.closest("button"); if (b) { lesson = +b.dataset.i; home(); } };
+  app.querySelector("#pyseg").onclick = (e) => { const b = e.target.closest("button"); if (b) { showPy = b.dataset.v === "1"; store.set("showPy", showPy); home(); } };
+  app.querySelectorAll(".step").forEach((b) => (b.onclick = () => start(+b.dataset.step)));
+}
+
+function start(step, list) {
+  Q = { step, list: list || buildQuestions(step), i: 0, right: 0, wrong: [], retry: !!list };
+  render();
+}
+
+function frame(inner) {
+  const s = STEPS[Q.step];
+  app.innerHTML = `
+    <div class="top">
+      <button class="ghost" id="home">← 처음</button>
+      <span class="name">STEP ${Q.step + 1} · ${s.name}${Q.retry ? " (다시 풀기)" : ""}</span>
+      <span class="count">${Math.min(Q.i + 1, Q.list.length)} / ${Q.list.length}</span>
+    </div>
+    <div class="bar"><i style="width:${(Q.i / Q.list.length) * 100}%"></i></div>
+    <div class="card">${inner}</div>`;
+  app.querySelector("#home").onclick = home;
+}
+
+function answered(q, ok) {
+  if (ok) Q.right++; else Q.wrong.push(q);
+}
+function nextBtn() {
+  const last = Q.i === Q.list.length - 1;
+  const b = document.createElement("button");
+  b.className = "main"; b.id = "next"; b.textContent = last ? "결과 보기" : "다음 문제";
+  b.onclick = () => { Q.i++; render(); };
+  app.querySelector(".card").appendChild(b);
+  b.focus();
+}
+const sayBtn = canSpeak ? `<button class="say" id="say">🔊 발음 듣기</button>` : "";
+function bindSay(t) { const b = app.querySelector("#say"); if (b) b.onclick = () => speak(t.replace(/[。？]/g, "")); }
+
+function render() {
+  if (Q.i >= Q.list.length) return result();
+  const q = Q.list[Q.i];
+  if (q.kind === "mc") return renderMC(q);
+  renderOrder(q);
+}
+
+function renderMC(q) {
+  frame(`
+    <div class="ask">${Q.step === 0 ? "이 단어의 뜻은 무엇일까요?" : "이 문장의 알맞은 해석을 고르세요."}</div>
+    <div class="prompt">
+      ${zh(q.zh, q.zh.length > 5 ? "long" : "")}
+      <span class="py hidepy" id="ppy">${esc(q.py)}</span>
+      ${sayBtn}
+    </div>
+    <div class="opts">${q.opts.map((o, i) => `<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}</div>`);
+  bindSay(q.zh);
+  const btns = [...app.querySelectorAll(".opt")];
+  btns.forEach((b) => (b.onclick = () => {
+    const i = +b.dataset.i;
+    btns.forEach((x) => (x.disabled = true));
+    btns[q.ans].classList.add("right");
+    if (i !== q.ans) b.classList.add("wrong");
+    app.querySelector("#ppy").classList.remove("hidepy");
+    answered(q, i === q.ans);
+    nextBtn();
+  }));
+}
+
+function renderOrder(q) {
+  const s = q.s, n = s.h.length;
+  let order;
+  do { order = shuffle([...Array(n).keys()]); } while (order.every((v, i) => v === i));
+  const placed = [];
+  let done = false;
+  frame(`
+    <div class="ask">뜻에 맞게 낱말을 순서대로 눌러 문장을 만드세요.</div>
+    <div class="prompt"><span class="ko">${esc(q.ko)}</span></div>
+    <div class="slot" id="slot"></div>
+    <div class="pool" id="pool"></div>
+    <button class="main" id="check" disabled>확인</button>`);
+  const slot = app.querySelector("#slot"), pool = app.querySelector("#pool"), check = app.querySelector("#check");
+  const chip = (i) => `<button class="chip" data-i="${i}">${zh(s.h[i])}<span class="py hidepy">${esc(s.p[i])}</span></button>`;
+  const draw = () => {
+    slot.innerHTML = placed.map(chip).join("");
+    pool.innerHTML = order.filter((i) => !placed.includes(i)).map(chip).join("");
+    check.disabled = placed.length !== n;
+  };
+  pool.onclick = (e) => { const b = e.target.closest(".chip"); if (b && !done) { placed.push(+b.dataset.i); draw(); } };
+  slot.onclick = (e) => { const b = e.target.closest(".chip"); if (b && !done) { placed.splice(placed.indexOf(+b.dataset.i), 1); draw(); } };
+  check.onclick = () => {
+    done = true;
+    const made = placed.map((i) => s.h[i]).join("");
+    const key = s.h.join("");
+    const ok = made === key || (ALT[key] || []).includes(made);
+    slot.classList.add(ok ? "right" : "wrong");
+    slot.querySelectorAll(".chip").forEach((c) => (c.disabled = true));
+    slot.querySelectorAll(".hidepy").forEach((c) => c.classList.remove("hidepy"));
+    check.remove();
+    const fb = document.createElement("div");
+    fb.className = "fb " + (ok ? "right" : "wrong");
+    fb.innerHTML = `<b>${ok ? "정답이에요!" : "아쉬워요. 정답은"}</b>${zh(q.zh)}<span class="py">${esc(q.py)}</span>${sayBtn}`;
+    app.querySelector(".card").appendChild(fb);
+    bindSay(q.zh);
+    answered(q, ok);
+    nextBtn();
+  };
+  draw();
+}
+
+function result() {
+  const total = Q.list.length, right = Q.right, step = Q.step, wrong = Q.wrong;
+  if (!Q.retry) {
+    const k = `best_${step}_${lesson}`, best = store.get(k);
+    if (!best || right > best.right) store.set(k, { right, total });
+  }
+  const pct = Math.round((right / total) * 100);
+  const msg = pct === 100 ? "완벽해요! 太棒了!" : pct >= 80 ? "잘했어요! 조금만 더 다듬어 봐요." : pct >= 50 ? "절반은 넘었어요. 틀린 문제를 다시 풀어 봐요." : "괜찮아요. 한 번 더 도전해 봐요!";
+  app.innerHTML = `
+    <div class="top"><button class="ghost" id="home">← 처음</button><span class="name">STEP ${step + 1} · ${STEPS[step].name} 결과</span></div>
+    <div class="card">
+      <div class="score"><div class="big">${right}<small> / ${total}</small></div><p>${LESSONS[lesson]} · ${msg}</p></div>
+      ${wrong.length ? `<ul class="miss">${wrong.map((q) => `<li>${zh(q.zh)}<span class="py">${esc(q.py)}</span><span class="ko">${esc(q.ko)}</span></li>`).join("")}</ul>` : ""}
+      ${wrong.length ? `<button class="main" id="retry">틀린 ${wrong.length}문제 다시 풀기</button>` : ""}
+      ${step < 2 ? `<button class="${wrong.length ? "second" : "main"}" id="nextstep">다음 단계: STEP ${step + 2} ${STEPS[step + 1].name}</button>` : ""}
+      <button class="second" id="again">이 단계 처음부터 다시</button>
+    </div>`;
+  app.querySelector("#home").onclick = home;
+  app.querySelector("#again").onclick = () => start(step);
+  const r = app.querySelector("#retry");
+  if (r) r.onclick = () => {
+    const src = buildQuestions(step);
+    const redo = wrong.map((w) => src.find((x) => x.zh === w.zh && x.ko === w.ko)).filter(Boolean);
+    start(step, shuffle(redo));
+  };
+  const ns = app.querySelector("#nextstep");
+  if (ns) ns.onclick = () => start(step + 1);
+}
+
+home();
+</script>
+</body>
+</html>
