@@ -147,14 +147,23 @@ const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) {
 const pick = (arr) => (lesson === 0 ? arr : [arr[lesson - 1]]);
 const hz = (s) => s.h.join("") + s.e;
 const pyOf = (s) => { const t = s.p.join(" "); return t.charAt(0).toUpperCase() + t.slice(1) + (s.e === "？" ? "?" : "."); };
+const canSpeak = "speechSynthesis" in window;
+let zhVoice = null;
+const findVoice = () => {
+  try {
+    const vs = speechSynthesis.getVoices();
+    zhVoice = vs.find((v) => /^zh[-_]CN/i.test(v.lang)) || vs.find((v) => /^(zh|cmn)/i.test(v.lang)) || null;
+  } catch (e) {}
+};
+if (canSpeak) { findVoice(); try { speechSynthesis.addEventListener("voiceschanged", findVoice); } catch (e) {} }
 const speak = (t) => {
   try {
-    const u = new SpeechSynthesisUtterance(t);
+    const u = new SpeechSynthesisUtterance(t.replace(/[。？]/g, ""));
     u.lang = "zh-CN"; u.rate = 0.8;
+    if (zhVoice) u.voice = zhVoice;
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) {}
 };
-const canSpeak = "speechSynthesis" in window;
 
 // 보기 3개 뽑기: 뜻이 겹치지 않게, 가까운 후보(near)를 먼저
 function distractors(answerKey, near, far, keyOf) {
@@ -197,6 +206,7 @@ function countFor(step) {
 
 function home() {
   Q = null;
+  try { speechSynthesis.cancel(); } catch (e) {}
   document.body.classList.toggle("nopy", !showPy);
   app.innerHTML = `
     <h1>중국어 4·5과 학습</h1>
@@ -252,7 +262,7 @@ function nextBtn() {
   b.focus();
 }
 const sayBtn = canSpeak ? `<button class="say" id="say">🔊 발음 듣기</button>` : "";
-function bindSay(t) { const b = app.querySelector("#say"); if (b) b.onclick = () => speak(t.replace(/[。？]/g, "")); }
+function bindSay(t) { const b = app.querySelector("#say"); if (b) b.onclick = () => speak(t); }
 
 function render() {
   if (Q.i >= Q.list.length) return result();
@@ -271,6 +281,7 @@ function renderMC(q) {
     </div>
     <div class="opts">${q.opts.map((o, i) => `<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}</div>`);
   bindSay(q.zh);
+  if (Q.step === 0) speak(q.zh); // 단어: 문제가 나오면 바로 발음
   const btns = [...app.querySelectorAll(".opt")];
   btns.forEach((b) => (b.onclick = () => {
     const i = +b.dataset.i;
@@ -279,6 +290,7 @@ function renderMC(q) {
     if (i !== q.ans) b.classList.add("wrong");
     app.querySelector("#ppy").classList.remove("hidepy");
     answered(q, i === q.ans);
+    if (Q.step === 2 && i === q.ans) speak(q.zh); // 해석: 정답이면 문장 읽기
     nextBtn();
   }));
 }
@@ -318,6 +330,7 @@ function renderOrder(q) {
     fb.innerHTML = `<b>${ok ? "정답이에요!" : "아쉬워요. 정답은"}</b>${zh(q.zh)}<span class="py">${esc(q.py)}</span>${sayBtn}`;
     app.querySelector(".card").appendChild(fb);
     bindSay(q.zh);
+    if (ok) speak(q.zh); // 배열: 정답이면 문장 읽기
     answered(q, ok);
     nextBtn();
   };
