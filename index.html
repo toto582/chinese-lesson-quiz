@@ -56,6 +56,7 @@ h1 { font-size: 24px; margin: 8px 0 2px; letter-spacing: -0.02em; }
 .step .best { margin-left: auto; flex: none; font-size: 12.5px; color: var(--sub); text-align: right; }
 .step .best b { display: block; font-size: 15px; color: var(--ink); }
 
+.note { margin: 16px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--soft); color: var(--ink); font-size: 13.5px; }
 .top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .top .name { font-weight: 700; }
 .top .count { margin-left: auto; color: var(--sub); font-size: 14px; font-variant-numeric: tabular-nums; }
@@ -148,21 +149,37 @@ const pick = (arr) => (lesson === 0 ? arr : [arr[lesson - 1]]);
 const hz = (s) => s.h.join("") + s.e;
 const pyOf = (s) => { const t = s.p.join(" "); return t.charAt(0).toUpperCase() + t.slice(1) + (s.e === "？" ? "?" : "."); };
 const canSpeak = "speechSynthesis" in window;
-let zhVoice = null;
+let zhVoice = null, voiceCount = 0, lastUtter = null;
 const findVoice = () => {
   try {
     const vs = speechSynthesis.getVoices();
+    voiceCount = vs.length;
     zhVoice = vs.find((v) => /^zh[-_]CN/i.test(v.lang)) || vs.find((v) => /^(zh|cmn)/i.test(v.lang)) || null;
   } catch (e) {}
 };
-if (canSpeak) { findVoice(); try { speechSynthesis.addEventListener("voiceschanged", findVoice); } catch (e) {} }
+if (canSpeak) {
+  findVoice();
+  try { speechSynthesis.addEventListener("voiceschanged", () => { findVoice(); if (!Q) home(); }); } catch (e) {}
+}
 const speak = (t) => {
+  if (!canSpeak) return;
   try {
+    if (!zhVoice) findVoice();
     const u = new SpeechSynthesisUtterance(t.replace(/[。？]/g, ""));
-    u.lang = "zh-CN"; u.rate = 0.8;
+    u.lang = zhVoice ? zhVoice.lang : "zh-CN"; u.rate = 0.8;
     if (zhVoice) u.voice = zhVoice;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
+    lastUtter = u; // 참조를 유지해야 일부 브라우저에서 재생이 끊기지 않음
+    const go = () => { try { speechSynthesis.resume(); speechSynthesis.speak(u); } catch (e) {} };
+    // cancel 직후 바로 speak 하면 새 발음까지 취소되는 브라우저가 있어 잠깐 띄움
+    if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(go, 120); } else go();
   } catch (e) {}
+};
+// 발음 가능 상태 안내 문구
+const voiceNote = () => {
+  if (!canSpeak) return "이 브라우저는 발음 듣기를 지원하지 않아요. Chrome이나 Edge에서 열어 주세요.";
+  if (zhVoice) return "";
+  if (voiceCount > 0) return "이 기기에 중국어 음성이 없어 발음이 나오지 않아요. Chrome이나 Edge에서 열거나, 기기 설정에서 중국어 음성을 추가해 주세요.";
+  return "발음이 들리지 않으면 Chrome이나 Edge에서 이 주소를 열어 주세요. (무음·진동 모드도 확인)";
 };
 
 // 보기 3개 뽑기: 뜻이 겹치지 않게, 가까운 후보(near)를 먼저
@@ -226,7 +243,8 @@ function home() {
         <span><span class="t">${s.name}</span><br><span class="d">${s.desc} · ${countFor(i)}문항</span></span>
         <span class="best">${best ? `최고 기록<b>${best.right} / ${best.total}</b>` : ""}</span>
       </button>`;
-    }).join("")}</div>`;
+    }).join("")}</div>
+    ${voiceNote() ? `<p class="note">🔈 ${voiceNote()}</p>` : ""}`;
   app.querySelector("#lessons").onclick = (e) => { const b = e.target.closest("button"); if (b) { lesson = +b.dataset.i; home(); } };
   app.querySelector("#pyseg").onclick = (e) => { const b = e.target.closest("button"); if (b) { showPy = b.dataset.v === "1"; store.set("showPy", showPy); home(); } };
   app.querySelectorAll(".step").forEach((b) => (b.onclick = () => start(+b.dataset.step)));
